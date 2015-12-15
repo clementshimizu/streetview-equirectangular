@@ -80,8 +80,7 @@ varying vec2 v_texcoord;
 #define PI 3.141592653589793
 
 void main(){
-    vec2 pnt = (v_texcoord ) * vec2(scale, scale * aspect);
-    gl_FragColor = texture2D(texture, pnt );
+    gl_FragColor = texture2D(texture, v_texcoord );
 }
 
 </textarea>
