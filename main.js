@@ -3,6 +3,11 @@ require.config({
         "embr": "lib/embr/src"
     }
 });
+
+ 
+	var GoToAddress = function (){};
+
+
 require([
     "embr/core",
     "embr/material",
@@ -669,4 +674,7 @@ function(core, material, Arcball, util, sv){
 
     resize();
 
+	GoToAddress = function(address){
+		searchAddress(address, function(loc){pos_marker.setPosition(loc);});
+	};
 });
