@@ -92,107 +92,12 @@ function(core, material, Arcball, util, sv){
         }
     };
 
-    function makeMapType(name){
-        var provider = maptype_providers[name];
-        return new gm.ImageMapType({
-            "getTileUrl": function(coord, zoom){
-                var i = (zoom + coord.x + coord.y) % provider.subdomains.length;
-                return provider.url.replace("{S}", provider.subdomains[i])
-                                   .replace("{Z}", zoom)
-                                   .replace("{X}", coord.x)
-                                   .replace("{Y}", coord.y);
-            },
-            "name": provider.name,
-            "tileSize": new gm.Size(256, 256),
-            "minZoom": provider.min_zoom,
-            "maxZoom": provider.max_zoom
-        });
-    }
+ 
 
-    var maptypes = {};
-    for(var name in maptype_providers){
-        maptypes[name] = makeMapType(name);
-    }
 
-    var map = new gm.Map(document.getElementById("map"), {
-        center: new gm.LatLng(0, 0),
-        zoom: 17,
-        mapTypeControlOptions: {
-            mapTypeIds: [ gm.MapTypeId.ROADMAP, gm.MapTypeId.HYBRID, "8bit", "toner" ]
-        },
-        mapTypeId: gm.MapTypeId.ROADMAP,
-        streetViewControl: false,
-        keyboardShortcuts: false
-    });
-
-    [ "toner" ].forEach(function(name){
-        map.mapTypes.set(name, maptypes[name]);
-    });
-
-    var pano_marker = new gm.Marker({
-        map: map,
-        icon: new gm.MarkerImage("img/arrow.png", new gm.Size(45, 28), new gm.Point(0, 0), new gm.Point(22, 10))
-    });
-    pano_marker.setHeading = function(heading){
-        var n = 16;
-        var i = Math.floor(heading / core.math.k2PI * n + 0.5) % n;
-        var icon = this.getIcon();
-        icon.origin.x = icon.size.width * (i % 4);
-        icon.origin.y = icon.size.height * Math.floor(i / 4);
-        this.setIcon(icon);
-    };
-    function updatePanoMarkerHeading(){
-        var axis = new core.Vec3(0,-0.01,-1);
-        var dir = arcball.orientation.toMat4().invert().mulVec3(axis);
-        pano_marker.setHeading(Math.atan2(dir.y, dir.x) + Math.PI * 2.5);
-    }
-    var pos_marker = new gm.Marker({
-        map: map,
-        draggable: true,
-        icon: new gm.MarkerImage("img/pegman.png", new gm.Size(30, 32), new gm.Point(0, 0), new gm.Point(15, 31))
-    });
-    pos_marker.setIconIndex = function(i){
-        var icon = this.getIcon();
-        icon.origin.x = icon.size.width * i;
-        this.setIcon(icon);
-    };
     var streetview = new gm.StreetViewService();
     var geocoder = new gm.Geocoder();
 
-    gm.event.addListener(map, "click", function(e){
-        pos_marker.setPosition(e.latLng);
-    });
-    gm.event.addListener(map, "maptypeid_changed", updateHash);
-    gm.event.addListener(pos_marker, "position_changed", function(){
-        requestPanoDataByLocation(pos_marker.getPosition(), 50);
-        if(pos_marker.dragging){
-            var pos = pos_marker.getPosition();
-            if(pos.lng() >= pos_marker.last_lng)
-                pos_marker.setIconIndex(1);
-            else
-                pos_marker.setIconIndex(2);
-            pos_marker.last_lng = pos.lng();
-        }
-    });
-    gm.event.addListener(pos_marker, "dragstart", function(e){
-        map.overlayMapTypes.setAt(1, maptypes["streetview"]);
-        pos_marker.last_lng = pos_marker.getPosition().lng();
-        pos_marker.dragging = true;
-    });
-    gm.event.addListener(pos_marker, "dragend", function(e){
-        map.overlayMapTypes.setAt(1, null);
-        pos_marker.setIconIndex(0);
-        pos_marker.dragging = false;
-    });
-    gm.event.addListener(map, "zoom_changed", function(e){
-        updateHash();
-    });
-
-    function centerPanoMarker(){
-        var data = loader.getPano();
-        if(data && !map.getBounds().contains(data.location.latLng))
-            map.panTo(data.location.latLng);
-    }
 
 
     var pano_heading;
@@ -205,11 +110,19 @@ function(core, material, Arcball, util, sv){
         }
         pending_pano_req = requestFn;
     }
-    function requestPanoDataByLocation(location, radius){
-        requestPanoData(function(){
-            streetview.getPanoramaByLocation(location, radius, onPanoData);
-        });
+	var lastLocation = 0;
+	var lastRadius = 0;
+	
+	var maxRadius = 7473794;
+    function requestPanoDataByLocation(myLocation, myRadius){
+		lastLocation = myLocation;
+        lastRadius = myRadius;
+		console.log("REquesting "+ lastLocation+ ","+lastRadius );
+//		requestPanoData(function(){
+            streetview.getPanorama({location: myLocation, radius: myRadius, source: google.maps.StreetViewSource.OUTDOOR}, onPanoData);
+  //      });
     }
+	
     function requestPanoDataById(id, callbackFn){
         requestPanoData(function(){
             streetview.getPanoramaById(id, function(){
@@ -221,14 +134,20 @@ function(core, material, Arcball, util, sv){
     function onPanoData(data, status){
         if(status == gm.StreetViewStatus.OK && loader){
             var pos = data.location.latLng;
-            pano_marker.setPosition(pos);
             loader.setPano(data, function(){
                 pano_heading = util.degreeToRadian(data.tiles.centerHeading);
-                location.value = data.location.description.trim();
+                //location.value = data.location.description.trim();
             });
-            centerPanoMarker();
             updateHash();
-        }
+        }else{
+			console.log("return value not ok for onpano data.  i suggest we expand the search ");
+			if(lastRadius<maxRadius){
+				console.log("expanding "+lastLocation.lat()+ ","+lastLocation.lng()+" : "+lastRadius );
+				requestPanoDataByLocation(lastLocation,lastRadius+lastRadius);
+			}else{
+				console.log("Stopping");
+			}
+		}
         pending_pano_req = null;
     }
 
@@ -247,8 +166,6 @@ function(core, material, Arcball, util, sv){
     ].join("\n");
     var pano_shader_src_frag_initial = code_text.value.trim();
 
-    var compressor = LZMA ? new LZMA("lib/lzma/lzma_worker.js") : null;
-    var pano_shader_src_compressed;
 
     function tryShaderCompile(){
         try{
@@ -259,13 +176,7 @@ function(core, material, Arcball, util, sv){
             console.log("Compile Successful!");
 
             var src_frag = code_text.value.trim();
-            if(compressor && src_frag != pano_shader_src_frag_initial){
-                pano_shader_src_compressed = null;
-                compressor.compress(src_frag, 1, function(res){
-                    pano_shader_src_compressed = util.byteArrayToHex(res);
-                    updateHash();
-                });
-            }
+         
         }
         catch(err){
             code_text.classList.add("error");
@@ -273,118 +184,9 @@ function(core, material, Arcball, util, sv){
         }
     }
 
-    code_text.addEventListener("keydown", function(e){
-        e.stopPropagation();
-        if(e.keyCode == 9){ // tab
-            e.preventDefault();
-
-            var start = code_text.selectionStart;
-            var end = code_text.selectionEnd;
-
-            code_text.value = code_text.value.substring(0, start) + "  " + code_text.value.substring(end, code_text.value.length);
-            code_text.selectionStart = code_text.selectionEnd = start + 2;
-            code_text.focus();
-        }
-    }, false);
-    code_text.addEventListener("keyup", function(e){
-        e.stopPropagation();
-        if(e.keyCode == 37 || // left
-           e.keyCode == 38 || // up
-           e.keyCode == 39 || // right
-           e.keyCode == 40)   // down
-            return;
-
-        tryShaderCompile();
-    }, false);
-    code_text.addEventListener("keypress", function(e){
-        e.stopPropagation();
-    }, false);
-
-
-    // Search
-
-    location.addEventListener("mousedown", function(e){
-        if(location !== document.activeElement){
-            e.preventDefault();
-            location.focus();
-            location.select();
-        }
-    }, false);
-    location.addEventListener("keydown", function(e){
-        e.stopPropagation();
-        if(e.keyCode == 13){ // return
-            e.preventDefault();
-            searchAddress(location.value, function(loc){
-                pos_marker.setPosition(loc);
-            });
-            location.blur();
-        }
-    }, false);
-    location.addEventListener("keypress", function(e){
-        e.stopPropagation();
-    }, false);
-
-
-    // Setup Code Toggle Animation
-
-    var code_open = false;
-    function setCodeOpen(open){
-        code_open = open;
-        code_toggle.setAttribute("class", code_open ? "open" : "shut");
-        if(code_open){
-            code.style.visibility = "visible";
-            code.classList.remove("shut");
-        }
-        else{
-            util.addTransitionEndListener(code, function(e){
-                code.style.visibility = "hidden";
-            }, true);
-            code.classList.add("shut");
-        }
-        updateHash();
-    }
-    code_toggle.addEventListener("click", function(e){
-        setCodeOpen(!code_open);
-    }, false);
-
-
-    // Setup Keyboard Driving
-
-    document.addEventListener("keydown", function(e){
-        if(loader && loader.getPano() && e.keyCode >= 37 && e.keyCode <= 40){
-            var key_heading = (e.keyCode - 38) * (Math.PI / 2);
-            var best_link, best_angle = Number.MAX_VALUE, angle;
-            loader.getPano().links.forEach(function(link){
-                angle = util.angleBetween(key_heading, util.degreeToRadian(link.heading));
-                if(angle < Math.PI / 2 && angle < best_angle){
-                    best_link = link;
-                    best_angle = angle;
-                }
-            });
-            if(best_link){
-                requestPanoDataById(best_link.pano, function(data, status){
-                    if(status == gm.StreetViewStatus.OK){
-                        pos_marker.setPosition(data.location.latLng);
-                        onPanoData(data, status);
-                    }
-                });
-            }
-        }
-    }, false);
 
 
     // Replacement Map Zoom (can't disable just arrow keys)
-
-    document.addEventListener("keypress", function(e){
-        var key = String.fromCharCode(e.charCode);
-        if(key == "-"){
-            map.setZoom(map.getZoom() - 1);
-        }
-        if(key == "="){
-            map.setZoom(map.getZoom() + 1);
-            centerPanoMarker();
-        }
-    }, false);
 
     // Mouse Wheel Pano Zoom
 
@@ -410,7 +212,6 @@ function(core, material, Arcball, util, sv){
     }
     function drag(x, y){
         arcball.drag(x, y);
-        updatePanoMarkerHeading();
     }
     function endDrag(){
         pano_dragging = false;
@@ -469,100 +270,39 @@ function(core, material, Arcball, util, sv){
     canvas.addEventListener("mousedown", onCanvasMouseDown);
     canvas.addEventListener("touchstart", onCanvasTouchStart);
 
-    above.addEventListener("click", function(e){
-        e.preventDefault();
-        arcball.orientation.reset();
-        updatePanoMarkerHeading();
-        updateHash();
-    });
-    below.addEventListener("click", function(e){
-        e.preventDefault();
-        arcball.orientation.reset().rotate(Math.PI, 1,0,0);
-        updatePanoMarkerHeading();
-        updateHash();
-    });
 
 
     // Fullwindow
-
-    var fullwindow = false;
-    function setFullwindow(fw){
-        if(fw !== fullwindow){
-            fullwindow = fw;
-            fullwindow_toggle.textContent = fullwindow ? "<" : ">";
-            if(fullwindow)
-                left.classList.add("full");
-            else
-                left.classList.remove("full");
-            resize();
-            updateHash();
-        }
-    }
-    fullwindow_toggle.addEventListener("click", function(e){
-        e.preventDefault();
-        setFullwindow(!fullwindow);
-    });
-
-
-    // About
-
-    about_backdrop.addEventListener("click", function(e){
-        e.preventDefault();
-        about.style.visibility = about_backdrop.style.visibility = "hidden";
-    }, false);
-    about_toggle.addEventListener("click", function(e){
-        e.preventDefault();
-        about.style.visibility = about_backdrop.style.visibility = "visible";
-    }, false);
-
 
     function resize(){
         canvas.width = canvas.clientWidth;
         canvas.height = canvas.clientHeight;
 
-        arcball.center = new core.Vec2(canvas.width / 2, canvas.height / 2);
-        arcball.radius = arcball.center.length();
 
-        map.getDiv().style.height = (right.clientHeight - mapui.offsetHeight) + "px";
 
-        about.style.left = (window.innerWidth - about.clientWidth) / 2 + "px";
-        about.style.top = (window.innerHeight - about.clientHeight) / 2 + "px";
     }
     window.addEventListener("resize", resize, false);
 
     function searchAddress(address, callback){
         geocoder.geocode({ address: address }, function(res, status){
             if(status == gm.GeocoderStatus.OK){
-                map.fitBounds(res[0].geometry.viewport);
                 callback(res[0].geometry.location);
-            }
+            }else{
+				console.log("Couldn't find address "+address);
+			}
         });
     }
 
     function updateHash(){
         var params = {
-            "o": arcball.orientation.toArray().map(function(x){ return util.formatNumber(x, 3); }),
-            "z": util.formatNumber(pano_zoom_goal, 3),
-            "mz": map.getZoom().toFixed()
+//            "z": util.formatNumber(pano_zoom_goal, 3),
         };
-        if(map.getMapTypeId() != gm.MapTypeId.ROADMAP){
-            params["mt"] = map.getMapTypeId();
-        }
         var loc;
         if(loader && loader.getPano() && (loc = loader.getPano().location)){
             params["p"] = [
                 loc.latLng.lat().toFixed(5),
                 loc.latLng.lng().toFixed(5)
             ];
-        }
-        if(fullwindow){
-            params["fw"] = 1;
-        }
-        if(code_open){
-            params["c"] = 1;
-        }
-        if(pano_shader_src_compressed){
-            params["fs"] = pano_shader_src_compressed;
         }
         document.location.hash = util.stringifyParams(params);
     }
@@ -571,36 +311,13 @@ function(core, material, Arcball, util, sv){
         if(params.o && params.o.length === 4){
             arcball.orientation.set.apply(arcball.orientation, params.o.map(parseFloat));
             pano_orientation.setQuat(arcball.orientation);
-            updatePanoMarkerHeading();
-        }
-        if(params.z){
-            pano_zoom = pano_zoom_goal = parseFloat(params.z);
-        }
-        if(params.mz){
-            map.setZoom(parseInt(params.mz));
-        }
-        if(params.mt){
-            map.setMapTypeId(params.mt);
         }
         if(params.p && params.p.length === 2){
             var loc = new gm.LatLng(parseFloat(params.p[0]), parseFloat(params.p[1]));
             if(!isNaN(loc.lat()) && !isNaN(loc.lat())){
-                map.panTo(loc);
-                pos_marker.setPosition(loc);
+                
                 load_hash_pano_fetched = true;
             }
-        }
-        if(params.fw && params.fw == 1){
-            setFullwindow(true);
-        }
-        if(params.c && params.c == 1){
-            setCodeOpen(true);
-        }
-        if(params.fs && typeof(params.fs) == "string" && compressor){
-            compressor.decompress(util.hexToByteArray(params.fs), function(res){
-                code_text.value = res;
-                tryShaderCompile();
-            });
         }
     }
     var load_hash_pano_fetched = false;
@@ -672,9 +389,12 @@ function(core, material, Arcball, util, sv){
     }
 
 
-    resize();
 
 	GoToAddress = function(address){
-		searchAddress(address, function(loc){pos_marker.setPosition(loc);});
+		console.log("searchAddress "+address);
+		searchAddress(address, function(loc){
+			console.log("requestPanoDataByLocation "+loc.lat()+ " , "+loc.lng());
+			requestPanoDataByLocation(loc,50);
+			});
 	};
 });

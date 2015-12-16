@@ -12,10 +12,11 @@ If you are intrested in this code you will likely perfer the orginal source bett
 -->
 
 <meta name="viewport" content="initial-scale=1.0, user-scalable=no"/>
+<script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAjIk5oR4xdUMTyoTRmYgXHOqWjEOD1F5Y&libraries=places"></script>
 <link href="css/style.css" media="all" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="lib/embr/src/lib/require.js"></script>
 <script type="text/javascript" src="lib/lzma/lzma.js"></script>
-<script type="text/javascript" src="http://maps.googleapis.com/maps/api/js?sensor=false"></script>
+<script type="text/javascript" src="http://maps.googleapis.com/maps/api/js"></script>
 <script type="text/javascript">
 window.addEventListener("load", function(){
     require([ "main" ]);
@@ -31,6 +32,15 @@ window.addEventListener("load", function(){
 	z-index: 10000;
     background-color: white;
 }
+.powered {
+	position: absolute;
+    bottom: 0px;
+    left: 0px;
+    padding:2px;
+	z-index: 10000;
+}
+
+
 #right, #code, #code-toggle,#panoui{
 display:none;
 }
@@ -39,35 +49,13 @@ width:100%;
 height:100%;
 }
 </style>
-<script type="text/javascript">
-var _gaq = _gaq || [];
-_gaq.push(['_setAccount', 'UA-28077326-1']);
-_gaq.push(['_trackPageview']);
 
-(function(){
-    var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
-    ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
-    var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
-})();
-</script>
 </head>
 <body>
 	<div class="copyright">Google Street View&trade;</div>
-    <div id="right">
-        <div id="map" ></div>
-        <div id="mapui" >
-            <div class="input-border">
-                <input id="location" type="text" tabindex="0" spellcheck="false"
-                    onfocus="this.parentNode.classList.add('focus')"
-                    onblur="this.parentNode.classList.remove('focus')"/>
-            </div>
-        </div>
-    </div>
+	<img class="powered" src="img/powered_by_google_on_non_white_hdpi.png">
     <div id="left">
         <canvas id="gl-canvas" class="grabbable" style="display:none;"></canvas>
-        <div id="no-webgl" style="display:none;">
-            <p>Hrm.. It looks like either your browser doesn't support WebGL, or it's not enabled.</p>
-        </div>
         <div id="code" class="shut" style="visibility:hidden">
 <textarea id="code-text" spellcheck="false">
 precision mediump float;
@@ -78,39 +66,31 @@ uniform mat3 transform;
 varying vec2 v_texcoord;
 
 #define PI 3.141592653589793
-
 void main(){
-    gl_FragColor = texture2D(texture, v_texcoord );
+  vec2 rads = vec2(PI * 2., PI);
+
+
+  float lonIn = (v_texcoord.x -.5)* 2.0 * PI;
+  float latIn = -(v_texcoord.y-.5) * PI;
+
+  float x = cos(latIn) * cos(lonIn);
+  float  y = cos(latIn) * sin(lonIn);
+  float z = sin(latIn);
+  vec3 sphere_pnt = vec3(x,y,z);
+
+  sphere_pnt *= transform;
+
+  // Convert to Spherical Coordinates
+  float r = length(sphere_pnt);
+  float lon = atan(sphere_pnt.y, sphere_pnt.x);
+  float lat = acos(sphere_pnt.z / r);
+
+  gl_FragColor = texture2D(texture, vec2(lon , lat) / rads);
 }
 
 </textarea>
         </div>
-        <svg id="code-toggle" title="Toggle Shader Source" class="shut" width="30" height="30" version="1.2" xmlns="http://www.w3.org/2000/svg">
-            <g transform="translate(15,15)">
-                <circle cx="0" cy="0" r="13"/>
-                <path d="M -7,0 L 7,0 M 0,-7 L 0,7"/>
-            </g>
-        </svg>
-        <div id="panoui">
-            <a id="above" href="#">above</a>
-            <a id="below" href="#">below</a>
-            <a id="fullwindow" class="r" href="#">&gt;</a>
-            <a id="about-toggle" class="r" href="#">about</a>
-        </div>
     </div>
-    <div id="about-backdrop" style="visibility:hidden;"></div>
-    <div id="about" style="visibility:hidden;">
-        <h1>Streetview<br/>Stereographic</h1>
-        <p>Shader Toy + Google Map + Panoramic Explorer</p>
-        <ul>
-            <li>Walk &nbsp; .. Keyboard &uarr; &larr; &darr; &rarr;</li>
-            <li>Rotate .. Click and drag left panel</li>
-        </ul>
-        <div id="forkme">
-            <a href="http://github.com/notlion/streetview-stereographic">
-                <img src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub">
-            </a>
-        </div>
-    </div>
+
 </body>
 </html>
