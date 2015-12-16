@@ -7,7 +7,7 @@ require.config({
  
 	var GoToAddress = function (){};
 var MyResize= function(){};
-
+var GoToPanoID= function(){};
 require([
     "embr/core",
     "embr/material",
@@ -288,7 +288,9 @@ function(core, material, Arcball, util, sv){
             if(status == gm.GeocoderStatus.OK){
                 callback(res[0].geometry.location);
             }else{
-				console.log("Couldn't find address "+address);
+				
+				console.log("Couldn't find address " + address + "->" +address.length);
+				GoToPanoID(address);
 			}
         });
     }
@@ -390,13 +392,21 @@ function(core, material, Arcball, util, sv){
 
 
 
+
+	GoToPanoID = function(id){
+		console.log("requestPanoDataById "+id);
+		requestPanoDataById(id, function(loc){
+			// console.log("requestPanoDataById "+loc.lat()+ " , "+loc.lng());
+			// requestPanoDataByLocation(loc,50);
+			});
+		};
 	GoToAddress = function(address){
 		console.log("searchAddress "+address);
 		searchAddress(address, function(loc){
 			console.log("requestPanoDataByLocation "+loc.lat()+ " , "+loc.lng());
 			requestPanoDataByLocation(loc,50);
 			});
-	};
+		};
 	MyResize = resize;
 	MyResize();
 });
