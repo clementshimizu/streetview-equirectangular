@@ -6,7 +6,7 @@ require.config({
 
  
 	var GoToAddress = function (){};
-
+var MyResize= function(){};
 
 require([
     "embr/core",
@@ -282,7 +282,7 @@ function(core, material, Arcball, util, sv){
 
     }
     window.addEventListener("resize", resize, false);
-
+	
     function searchAddress(address, callback){
         geocoder.geocode({ address: address }, function(res, status){
             if(status == gm.GeocoderStatus.OK){
@@ -397,4 +397,6 @@ function(core, material, Arcball, util, sv){
 			requestPanoDataByLocation(loc,50);
 			});
 	};
+	MyResize = resize;
+	MyResize();
 });
