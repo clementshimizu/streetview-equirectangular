@@ -17,7 +17,7 @@ var GoToAddress = function (){};
 var GoToDirection = function(){};
 
 var MyResize= function(){};
-
+var RefreshInfo  = function (){};
 
 require([
     "embr/core",
@@ -148,6 +148,7 @@ function(core, material,  util, sv){
                 pano_heading = util.degreeToRadian(data.tiles.centerHeading);
                 //location.value = data.location.description.trim();
             });
+			RefreshInfo();
             updateHash();
         }else{
 			console.log("return value not ok for onpano data.  i suggest we expand the search ");
@@ -439,6 +440,7 @@ function(core, material,  util, sv){
 		};
 		
 	GoToDirection = function(dir){
+		dir = parseFloat(dir);
 		if(loader && loader.getPano()){
             var key_heading = dir;
             var best_link, best_angle = Number.MAX_VALUE, angle;
@@ -456,6 +458,24 @@ function(core, material,  util, sv){
 	}
 	
 	
+	RefreshInfo = function(){
+		GetDescription();
+		GetPanoID();
+		GetLinkedPanoIDs();
+		GetLinkedDirections();
+	}
+	
 	MyResize = resize;
 	MyResize();
+	
+	
+		if(engine){
+			if(engine.IsAttached){
+				console.log("engine attached");
+				engine.call("DebugLog","engine attached");
+				engine.trigger("Ready");
+			}
+
+		}
+	
 });
