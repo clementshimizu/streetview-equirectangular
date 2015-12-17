@@ -5,9 +5,11 @@ require.config({
 });
 
  
-	var GoToAddress = function (){};
+var GoToAddress = function (){};
 var MyResize= function(){};
 var GoToPanoID= function(){};
+var ExploreDirection = function(){};
+var GetDirections = function(){};
 require([
     "embr/core",
     "embr/material",
@@ -223,6 +225,27 @@ function(core, material,  util, sv){
 			}
         });
     }
+	
+	
+    // Setup Keyboard Driving
+
+    document.addEventListener("keydown", function(e){
+        if(loader && loader.getPano() && e.keyCode >= 37 && e.keyCode <= 40){
+            var key_heading = (e.keyCode - 38) * (Math.PI / 2);
+            var best_link, best_angle = Number.MAX_VALUE, angle;
+            loader.getPano().links.forEach(function(link){
+                angle = util.angleBetween(key_heading, util.degreeToRadian(link.heading));
+                if(angle < Math.PI / 2 && angle < best_angle){
+                    best_link = link;
+                    best_angle = angle;
+                }
+            });
+            if(best_link){
+                GoToPanoID(best_link.pano);
+            }
+        }
+    }, false);
+
 
     function updateHash(){
         var params = {
@@ -272,7 +295,7 @@ function(core, material,  util, sv){
             projection: projection,
             aspect: canvas.height / canvas.width,
             scale: Math.pow(pano_zoom, 3),
-            transform: pano_orientation.toMat4().mul(new core.Mat4().rotate(pano_heading + Math.PI / 2, 0,0,1)),
+            transform: pano_orientation.toMat4().mul(new core.Mat4().rotate(pano_heading + Math.PI *2.0/ 2.0, 0,0,1)),
             time: time,
             texture: 0
         });
@@ -334,6 +357,31 @@ function(core, material,  util, sv){
 			requestPanoDataByLocation(loc,50);
 			});
 		};
+		
+	ExploreDirection = function(dir){
+		if(loader && loader.getPano()){
+            var key_heading = dir;
+            var best_link, best_angle = Number.MAX_VALUE, angle;
+            loader.getPano().links.forEach(function(link){
+                angle = util.angleBetween(util.degreeToRadian(key_heading), util.degreeToRadian(link.heading));
+                if(angle <  best_angle){
+                    best_link = link;
+                    best_angle = angle;
+                }
+            });
+            if(best_link){
+                GoToPanoID(best_link.pano);
+            }
+        }
+	}
+	
+	GetDirections = function(dir){
+			if(loader && loader.getPano()){
+				loader.getPano().links.forEach(function(link){
+					console.log(link);
+				});
+        }
+	}
 	MyResize = resize;
 	MyResize();
 });
