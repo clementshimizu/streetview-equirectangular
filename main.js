@@ -5,11 +5,20 @@ require.config({
 });
 
  
-var GoToAddress = function (){};
-var MyResize= function(){};
+var GetPano = function(){};
+var GetLinks = function (){};
+var GetPanoID = function(){};
+var GetLinkedDirections = function(){};
+var GetDescription = function(){};
+var GetLinkedPanoIDs= function(){};
+
 var GoToPanoID= function(){};
-var ExploreDirection = function(){};
-var GetDirections = function(){};
+var GoToAddress = function (){};
+var GoToDirection = function(){};
+
+var MyResize= function(){};
+
+
 require([
     "embr/core",
     "embr/material",
@@ -341,7 +350,51 @@ function(core, material,  util, sv){
     }
 
 
+	GetLinks = function(dir){
+		if(loader && loader.getPano()){
+			return loader.getPano().links;
+		}
+	}
+	
+	GetLinkedDirections = function(dir){
+		var directions = [];		
+			if(loader && loader.getPano()){
+				loader.getPano().links.forEach(function(link){
+					//console.log(link);
+					directions.push(link.heading)
+				});
+        }
+		return directions;
+	}
 
+	GetLinkedPanoIDs = function(dir){
+		var linked = [];		
+			if(loader && loader.getPano()){
+				loader.getPano().links.forEach(function(link){
+					linked.push(link.pano)
+				});
+        }
+		return linked;
+	}
+
+	
+	GetPanoID = function (){
+		if(loader && loader.getPano()&& loader.getPano().location){
+			return loader.getPano().location.pano;
+		}
+	}
+	
+	GetPano = function (){
+		if(loader && loader.getPano()){
+			return loader.getPano();
+		}
+	}
+	
+	GetDescription =  function (){
+		if(loader && loader.getPano()&& loader.getPano().location){
+			return loader.getPano().location.description;
+		}
+	}
 
 	GoToPanoID = function(id){
 		console.log("requestPanoDataById "+id);
@@ -358,7 +411,7 @@ function(core, material,  util, sv){
 			});
 		};
 		
-	ExploreDirection = function(dir){
+	GoToDirection = function(dir){
 		if(loader && loader.getPano()){
             var key_heading = dir;
             var best_link, best_angle = Number.MAX_VALUE, angle;
@@ -375,13 +428,7 @@ function(core, material,  util, sv){
         }
 	}
 	
-	GetDirections = function(dir){
-			if(loader && loader.getPano()){
-				loader.getPano().links.forEach(function(link){
-					console.log(link);
-				});
-        }
-	}
+	
 	MyResize = resize;
 	MyResize();
 });
