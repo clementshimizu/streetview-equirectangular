@@ -24,7 +24,8 @@ require([
     "embr/material",
 //    "embr/Arcball",
     "util",
-    "sv"
+    "sv",
+	"coherent"
 ],
 function(core, material,  util, sv){
 
@@ -350,12 +351,14 @@ function(core, material,  util, sv){
     }
 
 
+	// not glued
 	GetLinks = function(dir){
 		if(loader && loader.getPano()){
 			return loader.getPano().links;
 		}
 	}
 	
+	// glued
 	GetLinkedDirections = function(dir){
 		var directions = [];		
 			if(loader && loader.getPano()){
@@ -364,9 +367,15 @@ function(core, material,  util, sv){
 					directions.push(link.heading)
 				});
         }
+		
+		if(engine&&engine.IsAttached){
+			engine.call("SetLinkedDirections",directions);
+		}
+			
 		return directions;
 	}
 
+	// glued
 	GetLinkedPanoIDs = function(dir){
 		var linked = [];		
 			if(loader && loader.getPano()){
@@ -374,14 +383,25 @@ function(core, material,  util, sv){
 					linked.push(link.pano)
 				});
         }
+		
+		if(engine&&engine.IsAttached){
+			engine.call("SetLinkedPanoIDs",linked);
+		}
 		return linked;
 	}
 
 	
+	// glued
 	GetPanoID = function (){
+		var panoID = "";
 		if(loader && loader.getPano()&& loader.getPano().location){
-			return loader.getPano().location.pano;
+			panoID= loader.getPano().location.pano;
 		}
+		
+		if(engine&&engine.IsAttached){
+			engine.call("SetPanoID",panoID);
+		}
+		return panoID;
 	}
 	
 	GetPano = function (){
@@ -390,10 +410,17 @@ function(core, material,  util, sv){
 		}
 	}
 	
+	// glued
 	GetDescription =  function (){
+		var description="";
 		if(loader && loader.getPano()&& loader.getPano().location){
-			return loader.getPano().location.description;
+			description= loader.getPano().location.description;
 		}
+		
+		if(engine&&engine.IsAttached){
+			engine.call("SetDescription",description);
+		}
+		return description;
 	}
 
 	GoToPanoID = function(id){
