@@ -11,11 +11,11 @@ var GoToPanoID= function(){};
 require([
     "embr/core",
     "embr/material",
-    "embr/Arcball",
+//    "embr/Arcball",
     "util",
     "sv"
 ],
-function(core, material, Arcball, util, sv){
+function(core, material,  util, sv){
 
     if(!window.requestAnimationFrame){
         window.requestAnimationFrame = (function(){
@@ -118,9 +118,7 @@ function(core, material, Arcball, util, sv){
 		lastLocation = myLocation;
         lastRadius = myRadius;
 		console.log("REquesting "+ lastLocation+ ","+lastRadius );
-//		requestPanoData(function(){
-            streetview.getPanorama({location: myLocation, radius: myRadius, source: google.maps.StreetViewSource.OUTDOOR}, onPanoData);
-  //      });
+        streetview.getPanorama({location: myLocation, radius: myRadius, source: google.maps.StreetViewSource.OUTDOOR}, onPanoData);
     }
 	
     function requestPanoDataById(id, callbackFn){
@@ -198,78 +196,9 @@ function(core, material, Arcball, util, sv){
     var pano_zoom_goal = pano_zoom;
 
 
-    // Arcball
 
-    var arcball = new Arcball();
-    arcball.inverted = true;
     var pano_orientation = core.Quat.identity();
-    var pano_dragging = false;
-    var pano_dragging_touch_id = null;
-    function beginDrag(x, y){
-        pano_dragging = true;
-        canvas.classList.add("grabbing");
-        arcball.down(x, y);
-    }
-    function drag(x, y){
-        arcball.drag(x, y);
-    }
-    function endDrag(){
-        pano_dragging = false;
-        canvas.classList.remove("grabbing");
-        updateHash();
-    }
-    function onCanvasMouseDown(e){
-        e.preventDefault();
-        if(!pano_dragging){
-            beginDrag(e.clientX, e.clientY);
-            canvas.addEventListener("mousemove", onCanvasMouseDrag);
-            document.addEventListener("mouseup", onCanvasMouseUp, true);
-        }
-    }
-    function onCanvasMouseDrag(e){
-        drag(e.clientX, e.clientY);
-    }
-    function onCanvasMouseUp(e){
-        endDrag();
-        canvas.removeEventListener("mousemove", onCanvasMouseDrag);
-        document.removeEventListener("mouseup", onCanvasMouseUp);
-    }
-    function onCanvasTouchStart(e){
-        e.preventDefault();
-        if(!pano_dragging) {
-            var touch = e.changedTouches[0];
-            beginDrag(touch.clientX, touch.clientY);
-            pano_dragging_touch_id = touch.identifier;
-            canvas.addEventListener("touchmove", onCanvasTouchMove);
-            canvas.addEventListener("touchend", onCanvasTouchEnd);
-            canvas.addEventListener("touchcancel", onCanvasTouchEnd);
-            canvas.addEventListener("touchleave", onCanvasTouchEnd);
-        }
-    }
-    function onCanvasTouchMove(e){
-        for(var touch, i = e.changedTouches.length; --i >= 0;) {
-            touch = e.changedTouches[i];
-            if(touch.identifier === pano_dragging_touch_id) {
-                drag(touch.clientX, touch.clientY);
-                break;
-            }
-        }
-    }
-    function onCanvasTouchEnd(e){
-        for(var touch, i = e.changedTouches.length; --i >= 0;) {
-            touch = e.changedTouches[i];
-            if(touch.identifier === pano_dragging_touch_id) {
-                endDrag();
-                canvas.removeEventListener("touchmove", onCanvasTouchMove);
-                canvas.removeEventListener("touchend", onCanvasTouchEnd);
-                canvas.removeEventListener("touchcancel", onCanvasTouchEnd);
-                canvas.removeEventListener("touchleave", onCanvasTouchEnd);
-            }
-        }
-    }
-    canvas.addEventListener("mousedown", onCanvasMouseDown);
-    canvas.addEventListener("touchstart", onCanvasTouchStart);
-
+	
 
 
     // Fullwindow
@@ -311,13 +240,11 @@ function(core, material, Arcball, util, sv){
     function loadHash(){
         var params = util.parseUrlHash(document.location.hash);
         if(params.o && params.o.length === 4){
-            arcball.orientation.set.apply(arcball.orientation, params.o.map(parseFloat));
-            pano_orientation.setQuat(arcball.orientation);
+            pano_orientation.setQuat(pano_orientation);
         }
         if(params.p && params.p.length === 2){
             var loc = new gm.LatLng(parseFloat(params.p[0]), parseFloat(params.p[1]));
             if(!isNaN(loc.lat()) && !isNaN(loc.lat())){
-                
                 load_hash_pano_fetched = true;
             }
         }
@@ -340,7 +267,7 @@ function(core, material, Arcball, util, sv){
 
         loader.framebuffer.bindTexture(0);
         pano_zoom = core.math.lerp(pano_zoom, pano_zoom_goal, 0.33);
-        pano_orientation.slerp(arcball.orientation, 0.33).normalize();
+//        pano_orientation.slerp(arcball.orientation, 0.33).normalize();
         pano_shader.use({
             projection: projection,
             aspect: canvas.height / canvas.width,
