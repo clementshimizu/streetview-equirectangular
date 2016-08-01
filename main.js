@@ -473,7 +473,7 @@ function(core, material,  util, sv){
 			if(engine.IsAttached){
 				console.log("engine attached");
 				engine.call("DebugLog","engine attached");
-				engine.trigger("Ready");
+				engine.call("Ready");
 			}
 
 		}
