@@ -66,25 +66,39 @@ varying vec2 v_texcoord;
 
 #define PI 3.141592653589793
 void main(){
-  vec2 rads = vec2(PI * 2., PI);
+  vec2 rads = vec2(PI * 2.0, PI);
 
 
-  float lonIn = (v_texcoord.x -.5)* 2.0 * PI;
-  float latIn = -(v_texcoord.y-.5) * PI;
+  float lonIn = (v_texcoord.x -0.5)* 2.0 * PI;
+  float latIn = -(v_texcoord.y-0.5) * PI;
 
   float x = cos(latIn) * cos(lonIn);
-  float  y = cos(latIn) * sin(lonIn);
+  float y = cos(latIn) * sin(lonIn);
   float z = sin(latIn);
   vec3 sphere_pnt = vec3(x,y,z);
 
   sphere_pnt *= transform;
 
   // Convert to Spherical Coordinates
-  float r = length(sphere_pnt);
   float lon = atan(sphere_pnt.y, sphere_pnt.x);
-  float lat = acos(sphere_pnt.z / r);
+  float lat = acos(sphere_pnt.z );	
 
-  gl_FragColor = texture2D(texture, vec2(lon , lat) / rads);
+  vec2 uv =vec2(lon / rads.x, clamp01(lat/ rads.y));
+  
+  gl_FragColor = texture2D(texture,  uv);
+  // warning only works up to 4k * 4k
+  /*
+  if(  v_texcoord.x  > v_texcoord.y){
+	gl_FragColor = texture2D(texture, uv) * vec4(0,1,1,1);
+	  if(  (1.0-v_texcoord.x  )> v_texcoord.y){
+		gl_FragColor = texture2D(texture, uv) * vec4(1,0,1,1);
+	}
+  } else{
+	  if(  (1.0-v_texcoord.x  )> v_texcoord.y){
+		gl_FragColor = texture2D(texture, uv) * vec4(1,1,0,1);
+	}
+  }
+  */
 }
 
 </textarea>
