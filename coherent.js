@@ -1,13 +1,19 @@
-/*jslint browser: true, nomen: true, plusplus: true */
+/* jslint browser: true, nomen: true, plusplus: true */
+/* global module, define, global */
 
 /// @file coherent.js
 /// @namespace engine
 
-/// Coherent UI JavaScript interface.
+/// Coherent Browser JavaScript interface.
 /// The `engine` module contains all functions for communication between the UI and the game / application.
 (function (factory) {
 	if (typeof module === 'object' && module.exports) {
 		module.exports = factory(global, global.engine, false);
+	}
+	if (typeof define === 'function') {
+		define(function () {
+			return factory(window, window.engine, true);
+		});
 	} else {
 		window.engine = factory(window, window.engine, true);
 	}
@@ -43,8 +49,6 @@
 			}
 		};
 	};
-
-	/// @file coherent.js
 
 	/**
 	* Add a handler for an event
@@ -239,37 +243,6 @@
 		return promise;
 	};
 
-	var simpleEvent = function (type) {
-		return function () {
-			var prefix = ['coherent-js', type],
-				frame = document.createElement('iframe');
-			prefix.push.apply(prefix, arguments);
-			frame.src = prefix.join(':');
-			frame.width = '1px';
-			frame.height = '1px';
-			document.documentElement.appendChild(frame);
-			frame.parentNode.removeChild(frame);
-		};
-	};
-
-	if (engine === undefined)
-	{
-		if (window.__couiAndroid !== undefined && window.__couiAndroid.initCoui !== undefined)
-		{
-			var initRet = window.__couiAndroid.initCoui();
-			if (initRet)
-			{
-				eval(initRet);
-			}
-		}
-		else
-		{
-			simpleEvent('q')();
-		}
-		
-		engine = window.engine;
-	}
-
 	var isAttached = engine !== undefined;
 
 	engine = engine || {};
@@ -290,7 +263,7 @@
 	/// @param {String} name name of the event, by default removes all events
 	/// @param {Function} callback the callback function to be removed, by default removes all callbacks for a given event
 	/// @param context *this* context for the function, by default all removes all callbacks, regardless of context
-	/// @warning Removing all handlers for `engine` will remove some *Coherent UI* internal events, breaking some functionality.
+	/// @warning Removing all handlers for `engine` will remove some *Coherent Browser* internal events, breaking some functionality.
 
 	/// @function engine.trigger
 	/// Trigger an event
@@ -302,7 +275,11 @@
 	var concatArguments = Array.prototype.concat;
 	engine.trigger = function (name) {
 		this._trigger.apply(this, arguments);
-		if (this.events['all'] !== undefined) {
+		if (this._eventHandles[name] === undefined && this.IsAttached)
+		{
+			this.TriggerEvent.apply(this, arguments);
+		}
+		if (this.events.all !== undefined) {
 			var allArguments = concatArguments.apply(['all'], arguments);
 			this._trigger.apply(this, allArguments);
 		}
@@ -357,61 +334,6 @@
 		engine.BindingsReady = function () {
 			engine._OnReady();
 		};
-
-		engine.__observeLifetime = function () {
-		};
-	} else if (engine.SendMessage === undefined) {
-
-		var toArray = Array.prototype.slice;
-
-		if(window.__couiAndroid == undefined) {
-			var _trigger = Emitter.prototype.trigger;
-			engine._trigger = function () {
-				var _self = this,
-					args = toArray.call(arguments, 0),
-					stub = function () {
-						_trigger.apply(_self, args);
-					};
-				setTimeout(stub);
-			};
-		}
-
-		var frame = document.createElement('iframe');
-
-		var createSendMessage = function () {
-			var prefix = 'coherent-js:c:';
-			return function () {
-				var json = JSON.stringify(toArray.call(arguments, 2));
-				frame.src = prefix + arguments[0] + ':' + arguments[1] + ':' + encodeURIComponent(json);
-				frame.width = '1px';
-				frame.height = '1px';
-				document.documentElement.appendChild(frame);
-				frame.parentNode.removeChild(frame);
-			};
-		};
-		var createTriggerEvent = function () {
-			var prefix = 'coherent-js:e:';
-			return function () {
-				var json = JSON.stringify(toArray.call(arguments, 1));
-				frame.src = prefix + arguments[0] + ':' + encodeURIComponent(json);
-				frame.width = '1px';
-				frame.height = '1px';
-				document.documentElement.appendChild(frame);
-				frame.parentNode.removeChild(frame);
-			};
-		};
-		engine.SendMessage = createSendMessage();
-		engine.TriggerEvent = createTriggerEvent();
-
-
-		var ready = simpleEvent('r');
-		engine.BindingsReady = function () {
-			ready(0, window.location.href, window.parent === window? 1 : 0);
-		};
-
-		var unload = simpleEvent('u');
-		var unloadEvent = ((window.__couiAndroid === undefined) ? 'pagehide' : 'beforeunload');
-		window.addEventListener(unloadEvent, unload);
 
 		engine.__observeLifetime = function () {
 		};
@@ -482,7 +404,7 @@
 	engine._OnError = function (requestId, errors) {
 		engine._MapErrors(errors);
 
-		if (requestId === 0) {
+		if (requestId === null || requestId === 0) {
 			engine._ForEachError(errors, engine._TriggerError);
 		}
 		else {
@@ -537,23 +459,23 @@
 		var type = args[0],
 			id = args[1],
 			methods = args[2],
-			constructor = engine._boundTypes[type];
+			Constructor = engine._boundTypes[type];
 
-		if (constructor === undefined) {
-			constructor = function (id) {
+		if (Constructor === undefined) {
+			Constructor = function (id) {
 				this._id = id;
 			};
-			constructor.prototype.__Type = type;
+			Constructor.prototype.__Type = type;
 			methods.forEach(function (name) {
-				constructor.prototype[name] = createMethodStub(type + '_' + name);
+				Constructor.prototype[name] = createMethodStub(type + '_' + name);
 			});
-			engine._boundTypes[type] = constructor;
+			engine._boundTypes[type] = Constructor;
 		}
 
-		var instance = new constructor(id);
+		var instance = new Constructor(id);
 		engine.__observeLifetime(instance);
 		return instance;
-	}
+	};
 
 	engine._OnReady = function () {
 		engine._BindingsReady = true;
@@ -568,86 +490,6 @@
 			engine.trigger('Ready');
 		}
 	};
-
-	engine._hasClass = function (element, cls) {
-		return (' ' + element.className + ' ').indexOf(' ' + cls + ' ') > -1;
-	}
-
-	engine.checkClickThrough = function(x, y) {
-		var elem = document.elementFromPoint(x, y);
-		if(elem && elem != document.body && !engine._hasClass(elem, "coui-noinput")) {
-			// check for custom client click-through logic
-			if(engine._hasClass(elem, "coui-inputcallback")) {
-				var doInput = elem.couiInputCallback(x, y);
-				if(doInput) {
-					return "Y";
-				} else {
-					return "N";
-				}
-			}
-			return "Y";
-		} else {
-			return "N";
-		}
-	}
-
-	// Add an invisible div behind all elements for android input handling
-	if (window.__couiAndroid !== undefined && window.__couiAndroid.addTouchEvent !== undefined)
-	{
-		var touchListener = function(phase) {
-			return function(event) {
-				if (window.__couiAndroid.inputState == 0)
-				{
-					// Input state: Take all (all events go to the UI only)
-					return;
-				}
-				else if (window.__couiAndroid.inputState == 1)
-				{
-					// Input state: Take none
-					event.preventDefault();
-					
-					var touches = event.changedTouches;
-					for (var i = 0; i < touches.length; ++i) {
-						window.__couiAndroid.addTouchEvent(Number(touches[i].identifier), phase, touches[i].screenX, touches[i].screenY);
-					}
-				}
-				else
-				{
-					// Input state: Transparent
-					var touches = event.changedTouches;
-					for (var i = 0; i < touches.length; ++i) {
-						var isConsumed = engine && engine.checkClickThrough && engine.checkClickThrough(touches[i].pageX, touches[i].pageY);
-						if (phase != 0 || isConsumed == "N") {
-							window.__couiAndroid.addTouchEvent(Number(touches[i].identifier), phase, touches[i].screenX, touches[i].screenY);
-						}
-					}
-				}
-			};
-		};
-		
-		var setupCoherentForAndroidFunc = function() {
-			document.body.addEventListener('touchstart', touchListener(0));
-			document.body.addEventListener('touchend', touchListener(3));
-			document.body.addEventListener('touchcancel', touchListener(4));
-			document.body.addEventListener('touchmove', touchListener(1));
-			
-			var newdiv = document.createElement('div');
-			newdiv.setAttribute('id', '__CoherentBackground');
-			newdiv.setAttribute('class', 'coui-noinput');
-			newdiv.setAttribute('style', 'background-color: "rgba(0,0,0,0)";' +
-				'width: 100%; height: 100%; position: absolute;' +
-				'z-index: -1000000;');
-			
-			document.body.insertBefore(newdiv, document.body.firstChild);
-		};
-
-		if (document.body) {
-			setupCoherentForAndroidFunc();
-		} else {
-			document.addEventListener('DOMContentLoaded',
-				setupCoherentForAndroidFunc);
-		}
-	}	
 
 	if (hasOnLoad) {
 		global.onload = (function (originalWindowLoaded) {
@@ -670,23 +512,23 @@
 	engine._coherentGlobalCanvas.style.position = "absolute";
 	engine._coherentGlobalCanvas.style.border   = "0px solid";
 
-	engine._coherentLiveImageData = new Array();
+	engine._coherentLiveImageData = [];
 	engine._coherentCreateImageData = function(name, guid) {
 		var ctx = engine._coherentGlobalCanvas.getContext("2d");
 
 		var coherentImage = ctx.coherentCreateImageData(guid);
 		engine._coherentLiveImageData[name] = coherentImage;
-	}
+	};
 	engine._coherentUpdatedImageData = function(name) {
 		engine._coherentLiveImageData[name].coherentUpdate();
 		var canvases = document.getElementsByTagName('canvas');
 		for(var i = 0; i < canvases.length; ++i) {
-			if(canvases[i].onEngineImageDataUpdated != null) {
+			if(!!canvases[i].onEngineImageDataUpdated) {
 				canvases[i].onEngineImageDataUpdated(name,
 					engine._coherentLiveImageData[name]);
 			}
 		}
-	}
+	};
 
 	engine.on("_coherentCreateImageData", engine._coherentCreateImageData);
 	engine.on("_coherentUpdatedImageData", engine._coherentUpdatedImageData);
