@@ -369,7 +369,7 @@ function(core, material,  util, sv){
 				});
         }
 		
-		if(engine&&engine.IsAttached){
+		if(window.engine&&engine.IsAttached){
 			engine.call("SetLinkedDirections",directions);
 		}
 			
@@ -385,7 +385,7 @@ function(core, material,  util, sv){
 				});
         }
 		
-		if(engine&&engine.IsAttached){
+		if(window.engine&&engine.IsAttached){
 			engine.call("SetLinkedPanoIDs",linked);
 		}
 		return linked;
@@ -399,7 +399,7 @@ function(core, material,  util, sv){
 			panoID= loader.getPano().location.pano;
 		}
 		
-		if(engine&&engine.IsAttached){
+		if(window.engine&&engine.IsAttached){
 			engine.call("SetPanoID",panoID);
 		}
 		return panoID;
@@ -418,7 +418,7 @@ function(core, material,  util, sv){
 			description= loader.getPano().location.description;
 		}
 		
-		if(engine&&engine.IsAttached){
+		if(window.engine&&engine.IsAttached){
 			engine.call("SetDescription",description);
 		}
 		return description;
@@ -469,13 +469,16 @@ function(core, material,  util, sv){
 	MyResize();
 	
 	
-		if(engine){
+		if(window.engine){
 			if(engine.IsAttached){
 				console.log("engine attached");
 				engine.call("DebugLog","engine attached");
 				engine.call("Ready");
 			}
 
-		}
+		}else{
+            GoToAddress("Times Square");
+            console.log("use GoToAddres()");
+        }
 	
 });
