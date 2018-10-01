@@ -43,7 +43,8 @@ define([
                    "&panoid=" + this.pano +
                    "&zoom=" + this.zoom.toFixed() +
                    "&x=" + this.x.toFixed() +
-                   "&y=" + this.y.toFixed();
+                   "&y=" + this.y.toFixed()+
+                   "&key=AIzaSyDl1enuTNgpR8eS3_r6XaIpLY9_-JRYv_k";
         }
     };
 
