@@ -39,7 +39,7 @@ define([
             return [ this.pano, this.zoom, this.x, this.y ].join(",");
         },
         getUrl: function(){
-            return "http://cbk" + core.math.randInt(4) + ".google.com/cbk?output=tile" +
+            return "https://cbk" + core.math.randInt(4) + ".google.com/cbk?output=tile" +
                    "&panoid=" + this.pano +
                    "&zoom=" + this.zoom.toFixed() +
                    "&x=" + this.x.toFixed() +
@@ -67,14 +67,13 @@ define([
             }else{
                 max_zoom = 5;
             }
-            
             return  max_zoom;
         };
 
         var tiles_by_id = {};
         var queued_coords;
         var num_open_requests = 0;
-
+// 
         var callbacks_by_id = {};
 
         var pano_data;

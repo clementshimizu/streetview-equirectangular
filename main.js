@@ -97,7 +97,7 @@ function(core, material,  util, sv){
         },
         "streetview": {
             name: "StreetView",
-            url: "http://mts{S}.googleapis.com/vt?lyrs=svv|cb_client:apiv3&style=40,18&x={X}&y={Y}&z={Z}&scale=2",
+            url: "https://mts{S}.googleapis.com/vt?lyrs=svv|cb_client:apiv3&style=40,18&x={X}&y={Y}&z={Z}&scale=2",
             subdomains: gm_subdomains,
             min_zoom: 2,
             max_zoom: 17
