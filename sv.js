@@ -1,3 +1,4 @@
+
 define([
 
     "embr/core",
@@ -48,7 +49,27 @@ define([
 
     function TileLoader(gl){
         var max_open_requests = 4;
-        var max_zoom = 2;
+        var max_zoom = 5;
+        var max_zoomFN = function() {
+
+            var myHeight = window.innerHeight * window.devicePixelRatio;
+
+            if(myHeight <1028){
+                max_zoom = 2; // 1024 vertical res
+            }else if(myHeight < 2048){
+                max_zoom = 3; // 2048 vertical res
+            }else if(myHeight < 4096){
+                max_zoom = 4; // 4096 vertical res
+            }else if(myHeight < 8192 ){
+                max_zoom = 5; // 8192 vertical res
+            }else if(myHeight < 16384 ){
+                max_zoom = 6; // 16384 vertical res
+            }else{
+                max_zoom = 5;
+            }
+            
+            return  max_zoom;
+        };
 
         var tiles_by_id = {};
         var queued_coords;
@@ -125,7 +146,7 @@ define([
             }
 
             // Move to the next zoom level if possible
-            if(--num_open_requests === 0 && queued_coords.length === 0 && pano_zoom < max_zoom){
+            if(--num_open_requests === 0 && queued_coords.length === 0 && pano_zoom < max_zoomFN()){
                 loader.setZoom(pano_zoom + 1);
                 loader.resetQueue();
             }
@@ -180,7 +201,7 @@ define([
         };
 
         this.setZoom = function(zoom){
-            zoom = Math.min(max_zoom, zoom);
+            zoom = Math.min(max_zoomFN(), zoom);
             if(zoom !== pano_zoom){
                 pano_zoom = zoom;
                 pano_dims = getPanoDimensions(pano_data, pano_zoom);
